@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calzados Dashboard — Inventario</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <div class="app-wrapper">
+
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">
+                    <i class="bi bi-layer-forward"></i>
+                </div>
+                <div>
+                    <h2>Calzados</h2>
+                    <p>SYSTEM v1.0</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">Módulos</div>
+                <a href="dashboard.html" class="nav-item active">
+                    <i class="bi bi-boxes"></i> Inventario
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="bi bi-graph-up-arrow"></i> Reportes
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="bi bi-people"></i> Proveedores
+                </a>
+                <div class="nav-section-title">Ajustes</div>
+                <a href="#" class="nav-item">
+                    <i class="bi bi-gear"></i> Configuración
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-badge">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <div class="user-info">
+                        <div class="user-name" id="user-name-display">Cargando...</div>
+                        <div class="user-role">Administrador</div>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-sm" id="btn-logout" style="width: 100%; margin-top: 10px; display: flex; gap: 8px;">
+                    <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            
+            <header class="topbar">
+                <div class="topbar-left">
+                    <h3>Panel de Control</h3>
+                    <p>Gestión de existencias e inventario maestro</p>
+                </div>
+                <div class="topbar-right">
+                    <div class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="topbar-search" placeholder="Buscar por marca, modelo, SKU...">
+                    </div>
+                </div>
+            </header>
+
+            <div class="page-content">
+
+                <section class="stats-grid">
+                    <div class="stat-card c1">
+                        <div class="stat-icon"><i class="bi bi-shoe-prints"></i></div>
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-label">Modelos Totales</div>
+                    </div>
+                    <div class="stat-card c4">
+                        <div class="stat-icon"><i class="bi bi-exclamation-octagon"></i></div>
+                        <div class="stat-value" id="stat-sinstock">0</div>
+                        <div class="stat-label">Productos Agotados</div>
+                    </div>
+                    <div class="stat-card c2">
+                        <div class="stat-icon"><i class="bi bi-graph-down"></i></div>
+                        <div class="stat-value" id="stat-bajo">0</div>
+                        <div class="stat-label">Stock Bajo (≤ 5)</div>
+                    </div>
+                    <div class="stat-card c3">
+                        <div class="stat-icon"><i class="bi bi-currency-dollar"></i></div>
+                        <div class="stat-value" id="stat-valor">$0K</div>
+                        <div class="stat-label">Valor en Inventario</div>
+                    </div>
+                </section>
+
+                <div class="section-header">
+                    <div>
+                        <h4>Lista de Calzado</h4>
+                        <p>Visualiza y actualiza la información básica del catálogo</p>
+                    </div>
+                    <button class="btn btn-primary" id="btn-agregar">
+                        <i class="bi bi-plus-lg"></i> Nuevo Producto
+                    </button>
+                </div>
+
+                <div class="filters-bar">
+                    <button class="filter-chip active" data-group="genero" data-value="TODOS">Todos los géneros</button>
+                    <button class="filter-chip" data-group="genero" data-value="MASCULINO">Masculino</button>
+                    <button class="filter-chip" data-group="genero" data-value="FEMENINO">Femenino</button>
+                    <button class="filter-chip" data-group="genero" data-value="UNISEX">Unisex</button>
+                    
+                    <span style="border-left: 1px solid var(--border); margin: 0 4px;"></span>
+
+                    <button class="filter-chip active" data-group="categoria" data-value="TODOS">Todas las categorías</button>
+                    <button class="filter-chip" data-group="categoria" data-value="DEPORTIVO">Deportivo</button>
+                    <button class="filter-chip" data-group="categoria" data-value="CASUAL">Casual</button>
+                    <button class="filter-chip" data-group="categoria" data-value="FORMAL">Formal</button>
+                    <button class="filter-chip" data-group="categoria" data-value="BOTA">Botas</button>
+                    <button class="filter-chip" data-group="categoria" data-value="SANDALIA">Sandalias</button>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Producto / Modelo</th>
+                                <th>Color</th>
+                                <th>Talla</th>
+                                <th>Género</th>
+                                <th>Categoría</th>
+                                <th>Precio</th>
+                                <th>Stock</th>
+                                <th>SKU</th>
+                                <th style="width: 120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-body">
+                            </tbody>
+                    </table>
+
+                    <div class="pagination-bar">
+                        <div class="pagination-info" id="pag-info">
+                            Mostrando 0–0 de 0 resultados
+                        </div>
+                        <div class="pagination-btns" id="pag-btns">
+                            </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/inventario.js"></script>
+    <script>
+        // Inicializar el Dashboard al cargar completamente el árbol HTML
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
