@@ -13,11 +13,10 @@ async function apiFetch(path, options = {}) {
         headers: { 'Content-Type': 'application/json' },
     };
 
-
     const config = {
         ...defaults,
         ...options,
-        headers: {...defaults.headers, ...(options.headers || {}) },
+        headers: { ...defaults.headers, ...(options.headers || {}) },
     };
 
     const response = await fetch(url, config);
@@ -85,28 +84,49 @@ async function apiGetZapatos() {
 
 /**
  * POST /zapatos/crear  — Crear nuevo zapato
+ * Normaliza talla → Double y precio → número antes de enviar,
+ * para que Spring los deserialice correctamente en ZapatoRequest.
  * @param {ZapatoRequest} zapato
- * @returns {Promise<ZapatoResponse>}
+ * @returns {Promise<{ok, status, data}>}
  */
 async function apiCrearZapato(zapato) {
+    const payload = {
+        ...zapato,
+        talla:  zapato.talla  != null ? Number(zapato.talla)                    : null,
+        precio: zapato.precio != null ? parseFloat(Number(zapato.precio).toFixed(2)) : null,
+        stock:  zapato.stock  != null ? parseInt(zapato.stock)                   : null,
+    };
     const res = await apiFetch('/zapatos/crear', {
         method: 'POST',
-        body: JSON.stringify(zapato),
-    });
-    return res;
-}
-
-
-async function apiEditarZapato(sku, zapato) {
-    const res = await apiFetch(`/zapatos/${encodeURIComponent(sku)}`, {
-        method: 'PUT',
-        body: JSON.stringify(zapato),
+        body: JSON.stringify(payload),
     });
     return res;
 }
 
 /**
- * DELETE /zapatos/{sku}  — Eliminar zapato  [PENDIENTE BACKEND]
+ * PUT /zapatos/{sku}  — Editar zapato existente
+ * @param {string} sku
+ * @param {ZapatoRequest} zapato
+ * @returns {Promise<{ok, status, data}>}
+ */
+async function apiEditarZapato(sku, zapato) {
+    const payload = {
+        ...zapato,
+        talla:  zapato.talla  != null ? Number(zapato.talla)                    : null,
+        precio: zapato.precio != null ? parseFloat(Number(zapato.precio).toFixed(2)) : null,
+        stock:  zapato.stock  != null ? parseInt(zapato.stock)                   : null,
+    };
+    const res = await apiFetch(`/zapatos/${encodeURIComponent(sku)}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    });
+    return res;
+}
+
+/**
+ * DELETE /zapatos/{sku}  — Eliminar zapato
+ * @param {string} sku
+ * @returns {Promise<{ok, status, data}>}
  */
 async function apiEliminarZapato(sku) {
     const res = await apiFetch(`/zapatos/${encodeURIComponent(sku)}`, {
@@ -116,14 +136,15 @@ async function apiEliminarZapato(sku) {
 }
 
 /**
- * PATCH /zapatos/{sku}/stock  — Ajustar stock  [PENDIENTE BACKEND]
+ * PATCH /zapatos/{sku}/stock  — Ajustar stock
  * @param {string} sku
- * @param {number} cantidad  
+ * @param {number} cantidad  positivo = subir, negativo = bajar
+ * @returns {Promise<{ok, status, data}>}
  */
 async function apiAjustarStock(sku, cantidad) {
     const res = await apiFetch(`/zapatos/${encodeURIComponent(sku)}/stock`, {
         method: 'PATCH',
-        body: JSON.stringify({ cantidad }),
+        body: JSON.stringify({ cantidad: parseInt(cantidad) }),
     });
     return res;
 }

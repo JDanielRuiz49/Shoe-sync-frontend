@@ -113,8 +113,8 @@ function renderizarTabla() {
     tbody.innerHTML = pagina.map((z, i) => {
         const stockClass = z.stock === 0 ? 'stock-zero' : z.stock <= 5 ? 'stock-low' : 'stock-ok';
         const stockIcon = z.stock === 0 ? 'bi-x-circle' : z.stock <= 5 ? 'bi-exclamation-triangle' : 'bi-check-circle';
-        const generoClass = { MASCULINO: 'genero-M', FEMENINO: 'genero-F', UNISEX: 'genero-U' }[z.genero] ?? '';
-        const generoLabel = { MASCULINO: 'M', FEMENINO: 'F', UNISEX: 'U' }[z.genero] ?? z.genero;
+        const generoClass = { HOMBRE: 'genero-M', MUJER: 'genero-F', UNISEX: 'genero-U', NIÑO: 'genero-N', NIÑA: 'genero-N' }[z.genero] ?? '';
+        const generoLabel = { HOMBRE: 'H', MUJER: 'M', UNISEX: 'U', NIÑO: 'Ni♂', NIÑA: 'Ni♀' }[z.genero] ?? z.genero;
         const precioFmt = z.precio != null ?
             `$${Number(z.precio).toLocaleString('es-CO')}` :
             '—';
@@ -143,7 +143,7 @@ function renderizarTabla() {
       <td style="color:var(--text-muted);font-size:12px">${z.sku ?? '—'}</td>
       <td>
         <div class="actions-cell">
-          <button class="btn btn-outline btn-sm" title="Subir stock" onclick="abrirModalStock('${encodeURIComponent(JSON.stringify(z))}')">
+          <button class="btn btn-outline btn-sm" title="Ajustar stock" onclick="abrirModalStock('${encodeURIComponent(JSON.stringify(z))}')">
             <i class="bi bi-arrow-up-circle"></i>
           </button>
           <button class="btn btn-outline btn-sm" title="Editar" onclick="abrirModalEditar('${encodeURIComponent(JSON.stringify(z))}')">
@@ -325,7 +325,7 @@ function abrirModalStock(encoded) {
         — Stock actual: <span class="stock-badge ${zapato.stock <= 5 ? 'stock-low' : 'stock-ok'}">${zapato.stock}</span>
       </p>
       <div class="form-group">
-        <label class="form-label">Cantidad a agregar</label>
+        <label class="form-label">Cantidad</label>
         <input type="number" id="stock-cantidad" class="form-control"
           placeholder="Ej: 10" min="1" max="9999">
       </div>
@@ -433,7 +433,6 @@ function crearModal(innerHtml) {
     overlay.id = 'modal-overlay';
     overlay.innerHTML = `<div class="modal">${innerHtml}</div>`;
 
-    // Cerrar al click fuera
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) cerrarModal();
     });
@@ -448,8 +447,9 @@ function cerrarModal() {
 
 // ── Formulario zapato (crear / editar) ───────────────────────
 function formZapato(z = {}) {
-    const generos = ['MASCULINO', 'FEMENINO', 'UNISEX'];
-    const categorias = ['DEPORTIVO', 'CASUAL', 'FORMAL', 'BOTA', 'SANDALIA', 'OTRO'];
+    // Valores alineados con los enums del backend
+    const generos = ['HOMBRE', 'MUJER', 'UNISEX', 'NIÑO', 'NIÑA'];
+    const categorias = ['DEPORTIVO', 'CASUAL', 'FORMAL', 'BOTA', 'SANDALIA', 'ZAPATILLA', 'TACON', 'OTRO'];
 
     const sel = (arr, val) => arr.map(v =>
         `<option value="${v}" ${v === val ? 'selected' : ''}>${formatCategoria(v)}</option>`
@@ -505,7 +505,16 @@ function formZapato(z = {}) {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">SKU</label>
-        <input id="f-sku" class="form-control" placeholder="Opcional" value="${z.sku ?? ''}">
+        <div style="display:flex;gap:8px">
+          <input id="f-sku" class="form-control" placeholder="Ej: NIK-AIRM-42-A3F" value="${z.sku ?? ''}">
+          <button type="button"
+            class="btn btn-outline btn-sm"
+            title="Generar SKU automáticamente"
+            style="white-space:nowrap;flex-shrink:0"
+            onclick="generarSKU()">
+            <i class="bi bi-shuffle"></i> Auto
+          </button>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Descripción</label>
@@ -517,48 +526,68 @@ function formZapato(z = {}) {
 
 function leerFormZapato() {
     const campos = {
-        marca: document.getElementById('f-marca') ?.value.trim(),
-        modelo: document.getElementById('f-modelo') ?.value.trim(),
-        color: document.getElementById('f-color') ?.value.trim(),
-        talla: parseFloat(document.getElementById('f-talla') ?.value),
-        genero: document.getElementById('f-genero') ?.value,
-        categoria: document.getElementById('f-categoria') ?.value,
-        precio: parseFloat(document.getElementById('f-precio') ?.value),
-        stock: parseInt(document.getElementById('f-stock') ?.value),
-        sku: document.getElementById('f-sku') ?.value.trim() || undefined,
-        descripcion: document.getElementById('f-descripcion') ?.value.trim() || undefined,
+        marca:       document.getElementById('f-marca')?.value.trim(),
+        modelo:      document.getElementById('f-modelo')?.value.trim(),
+        color:       document.getElementById('f-color')?.value.trim(),
+        talla:       parseFloat(document.getElementById('f-talla')?.value),
+        genero:      document.getElementById('f-genero')?.value,
+        categoria:   document.getElementById('f-categoria')?.value,
+        precio:      parseFloat(document.getElementById('f-precio')?.value),
+        stock:       parseInt(document.getElementById('f-stock')?.value),
+        sku:         document.getElementById('f-sku')?.value.trim() || undefined,
+        descripcion: document.getElementById('f-descripcion')?.value.trim() || undefined,
     };
 
-    // Validación básica
-    if (!campos.marca) { showToast('La marca es obligatoria', 'warning'); return null; }
-    if (!campos.modelo) { showToast('El modelo es obligatorio', 'warning'); return null; }
-    if (!campos.color) { showToast('El color es obligatorio', 'warning'); return null; }
-    if (!campos.talla || campos.talla < 1) { showToast('Talla inválida', 'warning'); return null; }
-    if (!campos.genero) { showToast('Selecciona el género', 'warning'); return null; }
-    if (!campos.categoria) { showToast('Selecciona la categoría', 'warning'); return null; }
-    if (!campos.precio || campos.precio <= 0) { showToast('Precio inválido', 'warning'); return null; }
-    if (campos.stock < 0 || isNaN(campos.stock)) { showToast('Stock inválido', 'warning'); return null; }
+    if (!campos.marca)                           { showToast('La marca es obligatoria', 'warning');              return null; }
+    if (campos.marca.length > 50)                { showToast('Marca demasiado larga (máx 50 caracteres)', 'warning'); return null; }
+    if (!campos.modelo)                          { showToast('El modelo es obligatorio', 'warning');             return null; }
+    if (campos.modelo.length > 50)               { showToast('Modelo demasiado largo (máx 50 caracteres)', 'warning'); return null; }
+    if (!campos.color)                           { showToast('El color es obligatorio', 'warning');              return null; }
+    if (campos.color.length > 30)                { showToast('Color demasiado largo (máx 30 caracteres)', 'warning'); return null; }
+    if (!campos.talla || campos.talla < 1)       { showToast('Talla inválida', 'warning');                      return null; }
+    if (campos.talla > 60)                       { showToast('Talla demasiado grande (máx 60)', 'warning');     return null; }
+    if (!campos.genero)                          { showToast('Selecciona el género', 'warning');                 return null; }
+    if (!campos.categoria)                       { showToast('Selecciona la categoría', 'warning');              return null; }
+    if (!campos.precio || campos.precio <= 0)    { showToast('Precio inválido', 'warning');                     return null; }
+    if (campos.precio > 10000000)                { showToast('Precio demasiado alto', 'warning');               return null; }
+    if (isNaN(campos.stock) || campos.stock < 0) { showToast('Stock inválido', 'warning');                      return null; }
+    if (campos.stock > 10000)                    { showToast('Stock demasiado alto (máx 10,000)', 'warning');   return null; }
+    if (campos.sku && !/^[A-Z0-9\-]+$/.test(campos.sku))  { showToast('SKU solo puede contener mayúsculas, números y guiones', 'warning'); return null; }
+    if (campos.sku && campos.sku.length > 30)    { showToast('SKU demasiado largo (máx 30 caracteres)', 'warning'); return null; }
+    if (campos.descripcion && campos.descripcion.length > 200) { showToast('Descripción demasiado larga (máx 200 caracteres)', 'warning'); return null; }
 
     return campos;
+}
+
+// ── Generador de SKU ──────────────────────────────────────────
+function generarSKU() {
+    const marca     = (document.getElementById('f-marca')?.value.trim() || 'XX')
+                        .slice(0, 3).toUpperCase().replace(/\s+/g, '');
+    const modelo    = (document.getElementById('f-modelo')?.value.trim() || 'MOD')
+                        .slice(0, 4).toUpperCase().replace(/\s+/g, '');
+    const talla     = document.getElementById('f-talla')?.value.trim() || '00';
+    const aleatorio = Math.random().toString(36).slice(2, 5).toUpperCase();
+
+    document.getElementById('f-sku').value = `${marca}-${modelo}-${talla}-${aleatorio}`;
 }
 
 // ── Utilidades visuales ───────────────────────────────────────
 function colorCSS(nombre) {
     if (!nombre) return '#555';
     const map = {
-        negro: '#111',
-        blanco: '#eee',
-        rojo: '#e74c3c',
-        azul: '#3498db',
-        verde: '#2ecc71',
+        negro:    '#111',
+        blanco:   '#eee',
+        rojo:     '#e74c3c',
+        azul:     '#3498db',
+        verde:    '#2ecc71',
         amarillo: '#f1c40f',
-        naranja: '#e67e22',
-        gris: '#7f8c8d',
-        rosa: '#e91e8c',
-        morado: '#9b59b6',
-        café: '#795548',
-        marron: '#795548',
-        beige: '#d2b48c',
+        naranja:  '#e67e22',
+        gris:     '#7f8c8d',
+        rosa:     '#e91e8c',
+        morado:   '#9b59b6',
+        café:     '#795548',
+        marron:   '#795548',
+        beige:    '#d2b48c',
     };
     return map[nombre.toLowerCase()] ?? '#888';
 }
