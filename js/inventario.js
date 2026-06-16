@@ -15,7 +15,15 @@ async function initDashboard() {
     const sesion = obtenerSesion();
 
     // Nombre de usuario en sidebar
-    const nombre = sesion ?.usuario ?? sesion ?.username ?? 'Usuario';
+    let nombre;
+    if (sesion && sesion.usuario) {
+        nombre = sesion.usuario;
+    } else if (sesion && sesion.username) {
+        nombre = sesion.username;
+    } else {
+        nombre = 'Usuario';
+    }
+
     const initial = nombre.charAt(0).toUpperCase();
     document.getElementById('user-name-display').textContent = nombre;
     document.getElementById('user-avatar').textContent = initial;
@@ -71,18 +79,48 @@ async function cargarInventario() {
 // ── Filtros ───────────────────────────────────────────────────
 function aplicarFiltros() {
     const busqueda = document.getElementById('topbar-search').value.toLowerCase().trim();
-    const generoActivo = document.querySelector('.filter-chip[data-group="genero"].active') ?.dataset.value ?? 'TODOS';
-    const categoriaActiva = document.querySelector('.filter-chip[data-group="categoria"].active') ?.dataset.value ?? 'TODOS';
+
+    const generoChip = document.querySelector('.filter-chip[data-group="genero"].active');
+    let generoActivo;
+    if (generoChip) {
+        generoActivo = generoChip.dataset.value;
+    } else {
+        generoActivo = 'TODOS';
+    }
+
+    const categoriaChip = document.querySelector('.filter-chip[data-group="categoria"].active');
+    let categoriaActiva;
+    if (categoriaChip) {
+        categoriaActiva = categoriaChip.dataset.value;
+    } else {
+        categoriaActiva = 'TODOS';
+    }
 
     _filtrados = _zapatos.filter(z => {
-        const matchBusqueda = !busqueda ||
-            z.marca ?.toLowerCase().includes(busqueda) ||
-            z.modelo ?.toLowerCase().includes(busqueda) ||
-            z.sku ?.toLowerCase().includes(busqueda) ||
-            z.color ?.toLowerCase().includes(busqueda);
+        let matchBusqueda;
+        if (!busqueda) {
+            matchBusqueda = true;
+        } else {
+            matchBusqueda =
+                (z.marca && z.marca.toLowerCase().includes(busqueda)) ||
+                (z.modelo && z.modelo.toLowerCase().includes(busqueda)) ||
+                (z.sku && z.sku.toLowerCase().includes(busqueda)) ||
+                (z.color && z.color.toLowerCase().includes(busqueda));
+        }
 
-        const matchGenero = generoActivo === 'TODOS' || z.genero === generoActivo;
-        const matchCategoria = categoriaActiva === 'TODOS' || z.categoria === categoriaActiva;
+        let matchGenero;
+        if (generoActivo === 'TODOS') {
+            matchGenero = true;
+        } else {
+            matchGenero = z.genero === generoActivo;
+        }
+
+        let matchCategoria;
+        if (categoriaActiva === 'TODOS') {
+            matchCategoria = true;
+        } else {
+            matchCategoria = z.categoria === categoriaActiva;
+        }
 
         return matchBusqueda && matchGenero && matchCategoria;
     });
@@ -111,36 +149,123 @@ function renderizarTabla() {
     }
 
     tbody.innerHTML = pagina.map((z, i) => {
-        const stockClass = z.stock === 0 ? 'stock-zero' : z.stock <= 5 ? 'stock-low' : 'stock-ok';
-        const stockIcon = z.stock === 0 ? 'bi-x-circle' : z.stock <= 5 ? 'bi-exclamation-triangle' : 'bi-check-circle';
-        const generoClass = { HOMBRE: 'genero-M', MUJER: 'genero-F', UNISEX: 'genero-U', NIÑO: 'genero-N', NIÑA: 'genero-N' }[z.genero] ?? '';
-        const generoLabel = { HOMBRE: 'H', MUJER: 'M', UNISEX: 'U', NIÑO: 'Ni♂', NIÑA: 'Ni♀' }[z.genero] ?? z.genero;
-        const precioFmt = z.precio != null ?
-            `$${Number(z.precio).toLocaleString('es-CO')}` :
-            '—';
+        let stockClass;
+        if (z.stock === 0) {
+            stockClass = 'stock-zero';
+        } else if (z.stock <= 5) {
+            stockClass = 'stock-low';
+        } else {
+            stockClass = 'stock-ok';
+        }
+
+        let stockIcon;
+        if (z.stock === 0) {
+            stockIcon = 'bi-x-circle';
+        } else if (z.stock <= 5) {
+            stockIcon = 'bi-exclamation-triangle';
+        } else {
+            stockIcon = 'bi-check-circle';
+        }
+
+        const generoClassMap = {
+            HOMBRE: 'genero-M',
+            MUJER:  'genero-F',
+            UNISEX: 'genero-U',
+            NIÑO:   'genero-N',
+            NIÑA:   'genero-N',
+        };
+        let generoClass;
+        if (generoClassMap[z.genero] !== undefined) {
+            generoClass = generoClassMap[z.genero];
+        } else {
+            generoClass = '';
+        }
+
+        const generoLabelMap = {
+            HOMBRE: 'H',
+            MUJER:  'M',
+            UNISEX: 'U',
+            NIÑO:   'Ni♂',
+            NIÑA:   'Ni♀',
+        };
+        let generoLabel;
+        if (generoLabelMap[z.genero] !== undefined) {
+            generoLabel = generoLabelMap[z.genero];
+        } else {
+            generoLabel = z.genero;
+        }
+
+        let precioFmt;
+        if (z.precio != null) {
+            precioFmt = `$${Number(z.precio).toLocaleString('es-CO')}`;
+        } else {
+            precioFmt = '—';
+        }
+
+        let marcaDisplay;
+        if (z.marca) {
+            marcaDisplay = z.marca;
+        } else {
+            marcaDisplay = '—';
+        }
+
+        let modeloDisplay;
+        if (z.modelo) {
+            modeloDisplay = z.modelo;
+        } else {
+            modeloDisplay = '';
+        }
+
+        let colorDisplay;
+        if (z.color) {
+            colorDisplay = z.color;
+        } else {
+            colorDisplay = '—';
+        }
+
+        let tallaDisplay;
+        if (z.talla) {
+            tallaDisplay = z.talla;
+        } else {
+            tallaDisplay = '—';
+        }
+
+        let stockDisplay;
+        if (z.stock !== undefined && z.stock !== null) {
+            stockDisplay = z.stock;
+        } else {
+            stockDisplay = 0;
+        }
+
+        let skuDisplay;
+        if (z.sku) {
+            skuDisplay = z.sku;
+        } else {
+            skuDisplay = '—';
+        }
 
         return `
     <tr>
       <td>
-        <div class="marca-badge">${z.marca ?? '—'}</div>
-        <div class="model-text">${z.modelo ?? ''}</div>
+        <div class="marca-badge">${marcaDisplay}</div>
+        <div class="model-text">${modeloDisplay}</div>
       </td>
       <td>
         <div class="color-dot">
           <span class="color-swatch" style="background:${colorCSS(z.color)}"></span>
-          ${z.color ?? '—'}
+          ${colorDisplay}
         </div>
       </td>
-      <td>${z.talla ?? '—'}</td>
+      <td>${tallaDisplay}</td>
       <td><span class="genero-badge ${generoClass}">${generoLabel}</span></td>
       <td><span class="text-soft" style="font-size:12px">${formatCategoria(z.categoria)}</span></td>
       <td class="precio-text">${precioFmt}</td>
       <td>
         <span class="stock-badge ${stockClass}">
-          <i class="bi ${stockIcon}"></i> ${z.stock ?? 0}
+          <i class="bi ${stockIcon}"></i> ${stockDisplay}
         </span>
       </td>
-      <td style="color:var(--text-muted);font-size:12px">${z.sku ?? '—'}</td>
+      <td style="color:var(--text-muted);font-size:12px">${skuDisplay}</td>
       <td>
         <div class="actions-cell">
           <button class="btn btn-outline btn-sm" title="Ajustar stock" onclick="abrirModalStock('${encodeURIComponent(JSON.stringify(z))}')">
@@ -164,7 +289,12 @@ function renderizarPaginacion() {
     const info = document.getElementById('pag-info');
     const btns = document.getElementById('pag-btns');
 
-    const inicio = _filtrados.length === 0 ? 0 : (_paginaActual - 1) * POR_PAGINA + 1;
+    let inicio;
+    if (_filtrados.length === 0) {
+        inicio = 0;
+    } else {
+        inicio = (_paginaActual - 1) * POR_PAGINA + 1;
+    }
     const fin = Math.min(_paginaActual * POR_PAGINA, _filtrados.length);
     info.textContent = `Mostrando ${inicio}–${fin} de ${_filtrados.length} resultados`;
 
@@ -176,14 +306,31 @@ function renderizarPaginacion() {
 
     for (let p = 1; p <= totalPags; p++) {
         if (totalPags > 7 && p > 2 && p < totalPags - 1 && Math.abs(p - _paginaActual) > 1) {
-            if (p === 3 || p === totalPags - 2) html += `<span class="pag-btn" style="cursor:default">…</span>`;
+            if (p === 3 || p === totalPags - 2) {
+                html += `<span class="pag-btn" style="cursor:default">…</span>`;
+            }
             continue;
         }
-        html += `<button class="pag-btn ${p === _paginaActual ? 'active' : ''}" onclick="cambiarPagina(${p})">${p}</button>`;
+
+        let activeClass;
+        if (p === _paginaActual) {
+            activeClass = 'active';
+        } else {
+            activeClass = '';
+        }
+
+        html += `<button class="pag-btn ${activeClass}" onclick="cambiarPagina(${p})">${p}</button>`;
+    }
+
+    let nextDisabled;
+    if (_paginaActual === totalPags || totalPags === 0) {
+        nextDisabled = 'disabled';
+    } else {
+        nextDisabled = '';
     }
 
     html += `
-    <button class="pag-btn" ${_paginaActual === totalPags || totalPags === 0 ? 'disabled' : ''}
+    <button class="pag-btn" ${nextDisabled}
       onclick="cambiarPagina(${_paginaActual + 1})">
       <i class="bi bi-chevron-right"></i>
     </button>`;
@@ -203,12 +350,28 @@ function actualizarStats() {
     const total = _zapatos.length;
     const sinStock = _zapatos.filter(z => z.stock === 0).length;
     const stockBajo = _zapatos.filter(z => z.stock > 0 && z.stock <= 5).length;
-    const valorTotal = _zapatos.reduce((s, z) => s + (Number(z.precio ?? 0) * (z.stock ?? 0)), 0);
+    const valorTotal = _zapatos.reduce((s, z) => {
+        let precio;
+        if (z.precio !== undefined && z.precio !== null) {
+            precio = Number(z.precio);
+        } else {
+            precio = 0;
+        }
+
+        let stock;
+        if (z.stock !== undefined && z.stock !== null) {
+            stock = z.stock;
+        } else {
+            stock = 0;
+        }
+
+        return s + (precio * stock);
+    }, 0);
 
     document.getElementById('stat-total').textContent = total;
     document.getElementById('stat-sinstock').textContent = sinStock;
     document.getElementById('stat-bajo').textContent = stockBajo;
-    document.getElementById('stat-valor').textContent = `$${Math.round(valorTotal / 1000)}K`;
+    document.getElementById('stat-valor').textContent = `$$${Math.round(valorTotal / 1000)}K`;
 }
 
 // ── Modal CREAR ───────────────────────────────────────────────
@@ -246,7 +409,12 @@ async function guardarZapato() {
             cerrarModal();
             await cargarInventario();
         } else {
-            const msg = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+            let msg;
+            if (typeof res.data === 'string') {
+                msg = res.data;
+            } else {
+                msg = JSON.stringify(res.data);
+            }
             showToast(msg || 'Error al guardar', 'error');
         }
     } catch (err) {
@@ -314,6 +482,13 @@ async function actualizarZapato(skuOriginal) {
 function abrirModalStock(encoded) {
     const zapato = JSON.parse(decodeURIComponent(encoded));
 
+    let stockBadgeClass;
+    if (zapato.stock <= 5) {
+        stockBadgeClass = 'stock-low';
+    } else {
+        stockBadgeClass = 'stock-ok';
+    }
+
     const modal = crearModal(`
     <div class="modal-header">
       <h5><i class="bi bi-arrow-up-circle me-2" style="color:var(--success)"></i>Ajustar Stock</h5>
@@ -322,7 +497,7 @@ function abrirModalStock(encoded) {
     <div class="modal-body">
       <p style="color:var(--text-soft);margin-bottom:20px">
         <strong style="color:var(--text)">${zapato.marca} ${zapato.modelo}</strong>
-        — Stock actual: <span class="stock-badge ${zapato.stock <= 5 ? 'stock-low' : 'stock-ok'}">${zapato.stock}</span>
+        — Stock actual: <span class="stock-badge ${stockBadgeClass}">${zapato.stock}</span>
       </p>
       <div class="form-group">
         <label class="form-label">Cantidad</label>
@@ -357,7 +532,12 @@ async function aplicarStock(sku, stockActual) {
         return;
     }
 
-    const delta = op === 'subir' ? cantidadRaw : -cantidadRaw;
+    let delta;
+    if (op === 'subir') {
+        delta = cantidadRaw;
+    } else {
+        delta = -cantidadRaw;
+    }
 
     if (stockActual + delta < 0) {
         showToast('El stock no puede quedar negativo', 'warning');
@@ -455,25 +635,81 @@ function formZapato(z = {}) {
         `<option value="${v}" ${v === val ? 'selected' : ''}>${formatCategoria(v)}</option>`
     ).join('');
 
+    let marcaVal;
+    if (z.marca !== undefined) {
+        marcaVal = z.marca;
+    } else {
+        marcaVal = '';
+    }
+
+    let modeloVal;
+    if (z.modelo !== undefined) {
+        modeloVal = z.modelo;
+    } else {
+        modeloVal = '';
+    }
+
+    let colorVal;
+    if (z.color !== undefined) {
+        colorVal = z.color;
+    } else {
+        colorVal = '';
+    }
+
+    let tallaVal;
+    if (z.talla !== undefined) {
+        tallaVal = z.talla;
+    } else {
+        tallaVal = '';
+    }
+
+    let precioVal;
+    if (z.precio !== undefined) {
+        precioVal = z.precio;
+    } else {
+        precioVal = '';
+    }
+
+    let stockVal;
+    if (z.stock !== undefined) {
+        stockVal = z.stock;
+    } else {
+        stockVal = '';
+    }
+
+    let skuVal;
+    if (z.sku !== undefined) {
+        skuVal = z.sku;
+    } else {
+        skuVal = '';
+    }
+
+    let descripcionVal;
+    if (z.descripcion !== undefined) {
+        descripcionVal = z.descripcion;
+    } else {
+        descripcionVal = '';
+    }
+
     return `
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Marca *</label>
-        <input id="f-marca" class="form-control" placeholder="Nike, Adidas…" value="${z.marca ?? ''}">
+        <input id="f-marca" class="form-control" placeholder="Nike, Adidas…" value="${marcaVal}">
       </div>
       <div class="form-group">
         <label class="form-label">Modelo *</label>
-        <input id="f-modelo" class="form-control" placeholder="Air Max 90…" value="${z.modelo ?? ''}">
+        <input id="f-modelo" class="form-control" placeholder="Air Max 90…" value="${modeloVal}">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Color *</label>
-        <input id="f-color" class="form-control" placeholder="Negro, Blanco…" value="${z.color ?? ''}">
+        <input id="f-color" class="form-control" placeholder="Negro, Blanco…" value="${colorVal}">
       </div>
       <div class="form-group">
         <label class="form-label">Talla *</label>
-        <input id="f-talla" class="form-control" type="number" step="0.5" min="1" max="60" placeholder="42" value="${z.talla ?? ''}">
+        <input id="f-talla" class="form-control" type="number" step="0.5" min="1" max="60" placeholder="42" value="${tallaVal}">
       </div>
     </div>
     <div class="form-row">
@@ -495,18 +731,18 @@ function formZapato(z = {}) {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Precio *</label>
-        <input id="f-precio" class="form-control" type="number" step="0.01" min="0.01" placeholder="150000" value="${z.precio ?? ''}">
+        <input id="f-precio" class="form-control" type="number" step="0.01" min="0.01" placeholder="150000" value="${precioVal}">
       </div>
       <div class="form-group">
         <label class="form-label">Stock *</label>
-        <input id="f-stock" class="form-control" type="number" min="0" placeholder="0" value="${z.stock ?? ''}">
+        <input id="f-stock" class="form-control" type="number" min="0" placeholder="0" value="${stockVal}">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">SKU</label>
         <div style="display:flex;gap:8px">
-          <input id="f-sku" class="form-control" placeholder="Ej: NIK-AIRM-42-A3F" value="${z.sku ?? ''}">
+          <input id="f-sku" class="form-control" placeholder="Ej: NIK-AIRM-42-A3F" value="${skuVal}">
           <button type="button"
             class="btn btn-outline btn-sm"
             title="Generar SKU automáticamente"
@@ -518,24 +754,49 @@ function formZapato(z = {}) {
       </div>
       <div class="form-group">
         <label class="form-label">Descripción</label>
-        <input id="f-descripcion" class="form-control" placeholder="Opcional" value="${z.descripcion ?? ''}">
+        <input id="f-descripcion" class="form-control" placeholder="Opcional" value="${descripcionVal}">
       </div>
     </div>
   `;
 }
 
 function leerFormZapato() {
+    const marcaEl = document.getElementById('f-marca');
+    const modeloEl = document.getElementById('f-modelo');
+    const colorEl = document.getElementById('f-color');
+    const tallaEl = document.getElementById('f-talla');
+    const generoEl = document.getElementById('f-genero');
+    const categoriaEl = document.getElementById('f-categoria');
+    const precioEl = document.getElementById('f-precio');
+    const stockEl = document.getElementById('f-stock');
+    const skuEl = document.getElementById('f-sku');
+    const descripcionEl = document.getElementById('f-descripcion');
+
+    let skuVal;
+    if (skuEl && skuEl.value.trim()) {
+        skuVal = skuEl.value.trim();
+    } else {
+        skuVal = undefined;
+    }
+
+    let descripcionVal;
+    if (descripcionEl && descripcionEl.value.trim()) {
+        descripcionVal = descripcionEl.value.trim();
+    } else {
+        descripcionVal = undefined;
+    }
+
     const campos = {
-        marca:       document.getElementById('f-marca')?.value.trim(),
-        modelo:      document.getElementById('f-modelo')?.value.trim(),
-        color:       document.getElementById('f-color')?.value.trim(),
-        talla:       parseFloat(document.getElementById('f-talla')?.value),
-        genero:      document.getElementById('f-genero')?.value,
-        categoria:   document.getElementById('f-categoria')?.value,
-        precio:      parseFloat(document.getElementById('f-precio')?.value),
-        stock:       parseInt(document.getElementById('f-stock')?.value),
-        sku:         document.getElementById('f-sku')?.value.trim() || undefined,
-        descripcion: document.getElementById('f-descripcion')?.value.trim() || undefined,
+        marca:       marcaEl ? marcaEl.value.trim() : '',
+        modelo:      modeloEl ? modeloEl.value.trim() : '',
+        color:       colorEl ? colorEl.value.trim() : '',
+        talla:       parseFloat(tallaEl ? tallaEl.value : ''),
+        genero:      generoEl ? generoEl.value : '',
+        categoria:   categoriaEl ? categoriaEl.value : '',
+        precio:      parseFloat(precioEl ? precioEl.value : ''),
+        stock:       parseInt(stockEl ? stockEl.value : ''),
+        sku:         skuVal,
+        descripcion: descripcionVal,
     };
 
     if (!campos.marca)                           { showToast('La marca es obligatoria', 'warning');              return null; }
@@ -549,6 +810,7 @@ function leerFormZapato() {
     if (!campos.genero)                          { showToast('Selecciona el género', 'warning');                 return null; }
     if (!campos.categoria)                       { showToast('Selecciona la categoría', 'warning');              return null; }
     if (!campos.precio || campos.precio <= 0)    { showToast('Precio inválido', 'warning');                     return null; }
+    if (!campos.sku)                             { showToast('El SKU es obligatorio', 'warning');                return null; }
     if (campos.precio > 10000000)                { showToast('Precio demasiado alto', 'warning');               return null; }
     if (isNaN(campos.stock) || campos.stock < 0) { showToast('Stock inválido', 'warning');                      return null; }
     if (campos.stock > 10000)                    { showToast('Stock demasiado alto (máx 10,000)', 'warning');   return null; }
@@ -561,17 +823,40 @@ function leerFormZapato() {
 
 // ── Generador de SKU ──────────────────────────────────────────
 function generarSKU() {
-    const marca     = (document.getElementById('f-marca')?.value.trim() || 'XX')
-                        .slice(0, 3).toUpperCase().replace(/\s+/g, '');
-    const modelo    = (document.getElementById('f-modelo')?.value.trim() || 'MOD')
-                        .slice(0, 4).toUpperCase().replace(/\s+/g, '');
-    const talla     = document.getElementById('f-talla')?.value.trim() || '00';
+    const marcaEl = document.getElementById('f-marca');
+    const modeloEl = document.getElementById('f-modelo');
+    const tallaEl = document.getElementById('f-talla');
+
+    let marcaRaw;
+    if (marcaEl && marcaEl.value.trim()) {
+        marcaRaw = marcaEl.value.trim();
+    } else {
+        marcaRaw = 'XX';
+    }
+
+    let modeloRaw;
+    if (modeloEl && modeloEl.value.trim()) {
+        modeloRaw = modeloEl.value.trim();
+    } else {
+        modeloRaw = 'MOD';
+    }
+
+    let tallaRaw;
+    if (tallaEl && tallaEl.value.trim()) {
+        tallaRaw = tallaEl.value.trim();
+    } else {
+        tallaRaw = '00';
+    }
+
+    const marca     = marcaRaw.slice(0, 3).toUpperCase().replace(/\s+/g, '');
+    const modelo    = modeloRaw.slice(0, 4).toUpperCase().replace(/\s+/g, '');
+    const talla     = tallaRaw;
     const aleatorio = Math.random().toString(36).slice(2, 5).toUpperCase();
 
     document.getElementById('f-sku').value = `${marca}-${modelo}-${talla}-${aleatorio}`;
 }
 
-// ── Utilidades visuales ───────────────────────────────────────
+
 function colorCSS(nombre) {
     if (!nombre) return '#555';
     const map = {
@@ -589,7 +874,15 @@ function colorCSS(nombre) {
         marron:   '#795548',
         beige:    '#d2b48c',
     };
-    return map[nombre.toLowerCase()] ?? '#888';
+
+    let resultado;
+    if (map[nombre.toLowerCase()] !== undefined) {
+        resultado = map[nombre.toLowerCase()];
+    } else {
+        resultado = '#888';
+    }
+
+    return resultado;
 }
 
 function formatCategoria(cat) {
